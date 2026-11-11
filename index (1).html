@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bot Scout: pick your comp bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF3F5; --surface:#FFFFFF; --ink:#14212B; --muted:#52636F; --line:#C9D5DB;
+  --azure:#1C8FAF; --azure-ink:#0F6B85; --azure-soft:#DDF1F6;
+  --magenta:#B02A78; --magenta-soft:#F8E3EF;
+  --yellow:#F6C700; --on-yellow:#14212B; --hole:#0E5F77; --warn-bg:#FFF4C2;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0F181E; --surface:#18252D; --ink:#E8F0F3; --muted:#9DB0BA; --line:#2F414C;
+    --azure:#2FA9C9; --azure-ink:#7FD6EA; --azure-soft:#173540;
+    --magenta:#E267AE; --magenta-soft:#3A1F30;
+    --hole:#0B2B36; --warn-bg:#3A3210;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F181E; --surface:#18252D; --ink:#E8F0F3; --muted:#9DB0BA; --line:#2F414C;
+  --azure:#2FA9C9; --azure-ink:#7FD6EA; --azure-soft:#173540;
+  --magenta:#E267AE; --magenta-soft:#3A1F30;
+  --hole:#0B2B36; --warn-bg:#3A3210;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:17px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding:20px 18px 64px}
+h1,h2,h3{font-stretch:118%;font-weight:800;line-height:1.1;margin:0}
+h1{font-size:clamp(2rem,5.2vw,3.25rem);letter-spacing:-0.02em}
+h2{font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-0.01em}
+h3{font-size:1.15rem}
+p{margin:0 0 .8em;max-width:68ch}
+.lede{color:var(--muted);margin-top:.5em}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
+
+/* masthead */
+.mast{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.mast small{display:block;color:var(--muted);font-size:.95rem;margin-top:6px}
+.linkbtn{background:none;border:0;padding:6px 2px;color:var(--muted);text-decoration:underline;cursor:pointer}
+
+/* step nav: instruction-book step numbers */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:26px}
+.steps button{display:flex;align-items:baseline;gap:10px;text-align:left;cursor:pointer;
+  background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:8px 12px}
+.steps button b{font-size:2rem;font-weight:900;font-stretch:118%;line-height:1}
+.steps button span{font-weight:600;font-size:.95rem}
+.steps button[aria-current="step"]{border-color:var(--ink);box-shadow:4px 4px 0 var(--yellow)}
+.steps button.done b{color:var(--azure-ink)}
+@media (max-width:640px){.steps button{flex-direction:column;gap:2px}.steps button span{font-size:.8rem}}
+
+.head{margin-bottom:18px}
+.panel{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:18px}
+.field label{font-weight:700;display:block;margin-bottom:4px}
+.field .hint{color:var(--muted);font-size:.9rem}
+input[type=text],textarea{width:100%;background:var(--bg);border:2px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:76px;resize:vertical}
+
+/* bot picker */
+.group{margin-top:26px}
+.group h3{margin-bottom:10px}
+.group h3 em{font-style:normal;font-weight:500;color:var(--muted);font-size:.95rem;font-stretch:100%}
+.bots{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.bot{position:relative;display:block;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:14px 14px 12px;cursor:pointer}
+.bot input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.bot:has(input:checked){border-color:var(--ink);box-shadow:5px 5px 0 var(--azure)}
+.bot:has(input:focus-visible){outline:3px solid var(--magenta);outline-offset:2px}
+.bot:has(input:disabled){opacity:.5;cursor:not-allowed}
+.bot .name{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:800;font-stretch:118%;font-size:1.15rem}
+.tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:.9rem}
+.bot:has(input:checked) .tick{background:var(--yellow);border-color:var(--ink);color:var(--on-yellow)}
+.bot:has(input:checked) .tick::after{content:"✓";font-weight:900}
+ul.facts{list-style:none;margin:8px 0 0;padding:0;font-size:.93rem}
+ul.facts li{padding-left:20px;position:relative;margin:3px 0}
+ul.facts li::before{position:absolute;left:0;font-weight:900}
+ul.facts li.pro::before{content:"+";color:var(--azure-ink)}
+ul.facts li.con::before{content:"–";color:var(--magenta)}
+ul.facts li.unk{color:var(--muted);font-style:italic}
+ul.facts li.unk::before{content:"?"}
+.flag{display:inline-block;margin-top:10px;background:var(--warn-bg);border-radius:6px;padding:3px 8px;font-size:.85rem;font-weight:600}
+
+.bar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:26px}
+.btn{background:var(--ink);color:var(--bg);border:0;border-radius:10px;padding:12px 20px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.status{color:var(--muted);font-weight:600}
+.msg{background:var(--warn-bg);border-radius:10px;padding:10px 14px;margin:14px 0;font-weight:600}
+
+/* priorities */
+.prio{display:grid;grid-template-columns:1fr auto;gap:12px 18px;align-items:center;padding:14px 0;border-top:2px solid var(--line)}
+.prio:first-of-type{border-top:0}
+.prio p{margin:2px 0 0;color:var(--muted);font-size:.95rem}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:10px;overflow:hidden}
+.seg label{position:relative;padding:8px 12px;font-weight:600;font-size:.9rem;cursor:pointer;border-left:2px solid var(--line);white-space:nowrap}
+.seg label:first-child{border-left:0}
+.seg input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.seg label:has(input:checked){background:var(--azure-soft)}
+.seg label.must:has(input:checked){background:var(--yellow);color:var(--on-yellow)}
+.seg label:has(input:focus-visible){outline:3px solid var(--magenta);outline-offset:-3px}
+@media (max-width:640px){.prio{grid-template-columns:1fr}}
+
+/* scoring */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{background:var(--surface);border:2px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:700;cursor:pointer}
+.tabs button[aria-selected="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.tabs button i{font-style:normal;font-weight:500;opacity:.75;margin-left:6px}
+.scout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:700px){.scout{grid-template-columns:1fr}}
+fieldset.crit{border:2px solid var(--line);border-radius:14px;background:var(--surface);margin:14px 0 0;padding:14px 16px 16px;min-width:0}
+fieldset.crit legend{padding:0 6px;font-weight:800;font-stretch:118%;font-size:1.1rem}
+.crit-top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.crit-top p{margin:0;color:var(--muted);font-size:.95rem}
+/* the beam: one pin per point */
+.beam{display:inline-flex;gap:7px;background:var(--azure);border-radius:999px;padding:6px 8px;flex:none}
+.beam span{width:20px;height:20px;border-radius:50%;background:var(--hole);transition:background .15s, transform .15s}
+.beam span.on{background:var(--yellow);box-shadow:inset 0 0 0 3px rgba(0,0,0,.18);transform:scale(1.08)}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:760px){.levels{grid-template-columns:1fr 1fr}}
+@media (max-width:420px){.levels{grid-template-columns:1fr}}
+.lvl{position:relative;display:block;border:2px solid var(--line);border-radius:10px;padding:9px 10px;font-size:.9rem;line-height:1.35;cursor:pointer;background:var(--bg)}
+.lvl input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.lvl b{display:block;font-size:.95rem;margin-bottom:2px}
+.lvl:has(input:checked){background:var(--yellow);color:var(--on-yellow);border-color:var(--ink)}
+.lvl:has(input:focus-visible){outline:3px solid var(--magenta);outline-offset:2px}
+
+/* verdict */
+.rank{display:grid;gap:12px;margin-top:8px}
+.row{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:14px 16px}
+.row.top{border-color:var(--ink);box-shadow:6px 6px 0 var(--magenta)}
+.row-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.row-head .n{font-weight:800;font-stretch:118%;font-size:1.25rem}
+.row.top .row-head .n{font-size:1.7rem}
+.row-head .pct{font-weight:900;font-stretch:118%;font-size:1.6rem;font-variant-numeric:tabular-nums}
+.track{height:16px;border-radius:999px;background:var(--bg);margin:8px 0;overflow:hidden}
+.fill{height:100%;width:0;border-radius:999px;background:var(--azure);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.row.top .fill{background:var(--magenta)}
+.row small{color:var(--muted)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.93rem;margin-top:6px}
+th,td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td.best{font-weight:900;background:var(--azure-soft)}
+.gap{margin-top:30px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:700px){.two{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){.fill,.beam span{transition:none}}
+@media print{.steps,.bar,.linkbtn,.noprint{display:none!important}body{background:#fff}.row.top{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Bot Scout</h1>
+      <small>Scout the bots, score them, and let the numbers start the argument.</small>
+    </div>
+    <button class="linkbtn" data-act="reset">Start over</button>
+  </header>
+  <nav class="steps" id="steps" aria-label="Steps"></nav>
+  <main id="view"></main>
+</div>
+
+<script>
+(function(){
+  var KEY = 'bot-scout-v3';
+  var MAX_PICKS = 5, MAX_MUST = 2;
+
+  var BOTS = [
+    {id:'hummer', name:'HummerOne Pro', src:'nlt',
+      pros:['Built with one SPIKE kit plus the expansion set','Beginner-friendly construction','Simple clip-on attachment system'],
+      cons:['Wheels may slip with heavier attachments']},
+    {id:'xbot', name:'Xbot', src:'nlt',
+      pros:['Built with one SPIKE kit plus the expansion set','Perimeter frame for balance and stability','Two attachment points: top and front'],
+      cons:['Frame uses a lot of LEGO pieces','Blue SPIKE wheels may slip at key moments']},
+    {id:'yb1', name:'YellowBot v1', src:'nlt',
+      pros:['Box frame for lining up on walls','Gravity-fed attachment drop system','Rear-wheel drive, so the colour sensor sits up front','Two attachment points: top and front'],
+      cons:['Blue SPIKE wheels may slip at key moments']},
+    {id:'yb2', name:'YellowBot v2', src:'nlt', wheels:true,
+      pros:['Improved box frame','Gravity-fed attachment system','Front-wheel drive','Lower centre of gravity (hub sits down in the frame)','Two attachment points','Yellow side walls can push objects'],
+      cons:['Raised frame needs extra LEGO','Needs 62.4 mm wheels']},
+    {id:'trackx', name:'Track-X', src:'nlt', wheels:true,
+      pros:['Very low centre of gravity for traction','High accuracy and consistency','Quick frame swaps using gravity','Widely used, proven design'],
+      cons:['Needs 62.4 mm wheels','Open sides: no walls']},
+    {id:'boxor', name:'Boxor', src:'nlt', wheels:true,
+      pros:['Low centre of gravity','High accuracy and consistency','Fast frame swaps','Box frame for lining up on walls','Very efficient attachment system'],
+      cons:['Needs 62.4 mm wheels']},
+    {id:'bb', name:'BB', src:'nlt', wheels:true,
+      pros:['Newest design in the line-up','Low centre of gravity','High accuracy and consistency','Fast frame swaps with a locking pin'],
+      cons:['Needs 62.4 mm wheels']},
+    {id:'droid', name:'Droid Bot E (Expansion)', src:'pl',
+      pros:['Built with one Core Set plus the Expansion Set','Made as a learning tool and a basic FIRST LEGO League design'],
+      unk:'The source doesn’t list downsides. Finding them is your job.'},
+    {id:'coop', name:'Coop Bot', src:'pl',
+      pros:['Modular base: Core Set plus parts from the Expansion Set','Comes with a sample universal attachment','Colour sensors can double as touch sensors','Has a separate cable guide'],
+      cons:['Designed for more experienced teams','Needs careful wire management']},
+    {id:'adb', name:'Advanced Driving Base', src:'lego',
+      pros:['Built with the Core Set plus the Expansion Set','Step-by-step build is inside the SPIKE app','LEGO’s own competition lessons use this bot'],
+      unk:'LEGO doesn’t list downsides. Finding them is your job.'}
+  ];
+  var SOURCES = [
+    {id:'nlt', name:'Next Level Teacher', note:'pros and cons are the designer’s own list'},
+    {id:'pl', name:'PrimeLessons.org', note:'from the description on the site'},
+    {id:'lego', name:'LEGO SPIKE app', note:'from the app'}
+  ];
+  var LEVELS = ['No-go','Shaky','Solid','Ace'];
+  var CRITERIA = [
+    {id:'parts', name:'Parts', q:'Can we get every piece?',
+      look:'Check the parts list against your kits. Special wheels are the usual catch.',
+      lv:['We can’t get the parts before we need to start building.','We’d have to order parts and wait for them.','We’re missing a few pieces, but can swap in ones we have.','Everything is in our kits right now.']},
+    {id:'fix', name:'Fixability', q:'Can we fix it fast when it breaks?',
+      look:'Simple beats clever. Look for fewer parts, tidy wires, and hub buttons and a charging port you can reach.',
+      lv:['A repair means taking half the robot apart.','We can fix it, but it’s slow and we’d need the instructions.','Most parts are easy to reach. A fix takes a few minutes.','Simple build. Anyone on our team could fix it between matches.']},
+    {id:'drive', name:'Driving consistency', q:'Will it drive the same way every run?',
+      look:'Three things keep a robot on course: a low center of gravity (heavy hub and motors down low), symmetry (left matches right), and wheel grip (tires that don’t slip). Count how many this bot has.',
+      lv:['None of the three. It’s tall, lopsided, and the wheels look likely to slip.','One of the three. For example, it’s symmetrical, but tall and slippy.','Two of the three. For example, low and symmetrical, but the wheels may slip.','All three: low center of gravity, symmetrical, and wheels that grip.']},
+    {id:'square', name:'Squaring up', q:'Can it line itself up on walls and models?',
+      look:'Flat, sturdy sides let the robot push against a wall to reset its aim. Engineers call that a reference surface.',
+      lv:['Open or uneven sides. Nothing flat to push against.','One flat side, and it looks a bit flimsy.','Flat, sturdy sides on the front or back.','Solid box frame. It can square up on any side.']},
+    {id:'pinless', name:'Pinless attachments', q:'Can attachments go on without pushing pins?',
+      look:'A match is 2.5 minutes. Drop-on and clip-on swaps save seconds and don’t bump the robot out of position.',
+      lv:['No clear place to connect attachments.','Attachments need several pins pushed in and pulled out.','One quick connection: a single pin, clip or latch.','Attachments drop on or slide on with no pins, in more than one spot.']}
+  ];
+  var WEIGHTS = [{v:1,t:'Nice to have'},{v:2,t:'Important'},{v:3,t:'Must-have'}];
+
+  function fresh(){
+    var w = {}; CRITERIA.forEach(function(c){ w[c.id] = 2; });
+    return {step:1, team:'', picks:[], weights:w, scores:{}, notes:{}, because:'', worry:'', active:null};
+  }
+  var S = fresh(), flash = '';
+  try { var raw = localStorage.getItem(KEY); if (raw) S = Object.assign(fresh(), JSON.parse(raw)); } catch(e){}
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function bot(id){ return BOTS.filter(function(b){ return b.id === id; })[0]; }
+  function picked(){ return S.picks.map(bot).filter(Boolean); }
+  function sc(bid, cid){ return (S.scores[bid] || {})[cid] || 0; }
+  function doneCount(bid){ return CRITERIA.filter(function(c){ return sc(bid, c.id); }).length; }
+  function allDone(){ return S.picks.length >= 2 && S.picks.every(function(id){ return doneCount(id) === CRITERIA.length; }); }
+  function mustCount(){ return CRITERIA.filter(function(c){ return S.weights[c.id] === 3; }).length; }
+  function pct(bid){
+    var got = 0, max = 0;
+    CRITERIA.forEach(function(c){ got += S.weights[c.id] * sc(bid, c.id); max += S.weights[c.id] * 4; });
+    return Math.round(got / max * 100);
+  }
+  function beam(n){
+    var h = '<span class="beam" aria-hidden="true">';
+    for (var i = 1; i <= 4; i++) h += '<span class="' + (i <= n ? 'on' : '') + '"></span>';
+    return h + '</span>';
+  }
+  function facts(b){
+    var h = '<ul class="facts">';
+    (b.pros || []).forEach(function(p){ h += '<li class="pro">' + p + '</li>'; });
+    (b.cons || []).forEach(function(p){ h += '<li class="con">' + p + '</li>'; });
+    if (b.unk) h += '<li class="unk">' + b.unk + '</li>';
+    h += '</ul>';
+    if (b.wheels) h += '<span class="flag">62.4 mm wheels aren’t in the SPIKE sets. Ask a coach if we have them.</span>';
+    return h;
+  }
+
+  /* ---------- views ---------- */
+  function navHTML(){
+    var names = ['Pick bots','Set priorities','Score','Verdict'];
+    var done = [S.picks.length >= 2, S.step > 2, allDone(), false];
+    return names.map(function(n, i){
+      return '<button data-act="go" data-step="' + (i+1) + '"' + (S.step === i+1 ? ' aria-current="step"' : '') +
+        (done[i] ? ' class="done"' : '') + '><b>' + (i+1) + '</b><span>' + n + '</span></button>';
+    }).join('');
+  }
+
+  function v1(){
+    var h = '<div class="head"><h2>Pick the bots you want to scout</h2>' +
+      '<p class="lede">Choose 2 to ' + MAX_PICKS + ' from the menu. Read the notes first, then open the build instructions for the ones that look promising.</p></div>' +
+      '<div class="panel field"><label for="team">Team number</label>' +
+      '<input type="text" id="team" data-field="team" inputmode="numeric" maxlength="6" value="' + esc(S.team) + '" placeholder="For example, 3">' +
+      '<div class="hint">Just the number. No need for anyone’s name.</div></div>';
+    SOURCES.forEach(function(src){
+      h += '<section class="group"><h3>' + src.name + ' <em>' + src.note + '</em></h3><div class="bots">';
+      BOTS.filter(function(b){ return b.src === src.id; }).forEach(function(b){
+        var on = S.picks.indexOf(b.id) > -1;
+        h += '<label class="bot"><input type="checkbox" data-pick="' + b.id + '"' + (on ? ' checked' : '') +
+          (!on && S.picks.length >= MAX_PICKS ? ' disabled' : '') + '>' +
+          '<span class="name">' + b.name + '<span class="tick"></span></span>' + facts(b) + '</label>';
+      });
+      h += '</div></section>';
+    });
+    h += '<div class="bar"><span class="status">' + S.picks.length + ' of ' + MAX_PICKS + ' picked' +
+      (S.picks.length < 2 ? '. Pick at least 2.' : '') + '</span>' +
+      '<button class="btn" data-act="go" data-step="2"' + (S.picks.length < 2 ? ' disabled' : '') + '>Set priorities</button></div>';
+    return h;
+  }
+
+  function v2(){
+    var h = '<div class="head"><h2>Decide what matters most to your team</h2>' +
+      '<p class="lede">These are the things robot engineers check first. Rank them before you score, so nobody bends the priorities to help a favorite. You only get ' + MAX_MUST + ' must-haves, so spend them carefully.</p></div>';
+    if (flash) h += '<div class="msg" role="alert">' + flash + '</div>';
+    h += '<div class="panel">';
+    CRITERIA.forEach(function(c){
+      h += '<div class="prio"><div><h3>' + c.name + '</h3><p>' + c.q + '</p></div>' +
+        '<div class="seg" role="radiogroup" aria-label="How much ' + c.name + ' matters">';
+      WEIGHTS.forEach(function(w){
+        h += '<label class="' + (w.v === 3 ? 'must' : '') + '"><input type="radio" name="w-' + c.id + '" data-weight="' + c.id + '" value="' + w.v + '"' +
+          (S.weights[c.id] === w.v ? ' checked' : '') + '>' + w.t + '</label>';
+      });
+      h += '</div></div>';
+    });
+    h += '</div><div class="bar"><span class="status">Must-haves used: ' + mustCount() + ' of ' + MAX_MUST + '</span>' +
+      '<button class="btn" data-act="go" data-step="3">Start scoring</button></div>';
+    return h;
+  }
+
+  function needPicks(){
+    return '<div class="panel"><h2>No bots picked yet</h2><p class="lede">Pick at least 2 bots to scout first.</p>' +
+      '<div class="bar"><span></span><button class="btn" data-act="go" data-step="1">Pick bots</button></div></div>';
+  }
+
+  function v3(){
+    if (S.picks.length < 2) return needPicks();
+    if (S.picks.indexOf(S.active) < 0) S.active = S.picks[0];
+    var b = bot(S.active), idx = S.picks.indexOf(S.active);
+    var h = '<div class="head"><h2>Score each bot</h2>' +
+      '<p class="lede">Open the build instructions, look for evidence, then agree on a level as a team. If you disagree, the person with the lowest score explains first.</p></div>';
+    h += '<div class="tabs" role="tablist">';
+    picked().forEach(function(p){
+      h += '<button role="tab" data-act="bot" data-bot="' + p.id + '" aria-selected="' + (p.id === S.active) + '">' +
+        p.name + '<i>' + doneCount(p.id) + '/' + CRITERIA.length + '</i></button>';
+    });
+    h += '</div><div class="panel scout"><div><h3>' + b.name + '</h3>' + facts(b) + '</div>' +
+      '<div class="field"><label for="notes">Evidence we found</label>' +
+      '<textarea id="notes" data-field="notes" placeholder="What did you notice in the instructions or pictures?">' + esc(S.notes[b.id]) + '</textarea></div></div>';
+    CRITERIA.forEach(function(c){
+      var cur = sc(b.id, c.id);
+      h += '<fieldset class="crit"><legend>' + c.name + ': ' + c.q + '</legend>' +
+        '<div class="crit-top"><p>' + c.look + '</p><span id="beam-' + c.id + '">' + beam(cur) + '</span></div><div class="levels">';
+      c.lv.forEach(function(t, i){
+        h += '<label class="lvl"><input type="radio" name="s-' + c.id + '" data-score="' + c.id + '" value="' + (i+1) + '"' +
+          (cur === i+1 ? ' checked' : '') + '><b>' + (i+1) + ' ' + LEVELS[i] + '</b>' + t + '</label>';
+      });
+      h += '</div></fieldset>';
+    });
+    var next = S.picks[idx + 1];
+    h += '<div class="bar"><span class="status" id="prog">' + progText() + '</span>' +
+      (next ? '<button class="btn" data-act="bot" data-bot="' + next + '" data-top="1">Next bot: ' + bot(next).name + '</button>'
+            : '<button class="btn" data-act="go" data-step="4">See the verdict</button>') + '</div>';
+    return h;
+  }
+  function progText(){
+    var total = S.picks.length * CRITERIA.length, n = 0;
+    S.picks.forEach(function(id){ n += doneCount(id); });
+    return n + ' of ' + total + ' scores in';
+  }
+
+  function v4(){
+    if (S.picks.length < 2) return needPicks();
+    if (!allDone()) {
+      var h0 = '<div class="panel"><h2>A few scores are still missing</h2><p class="lede">The verdict only counts when every bot has a score for every criterion.</p><ul>';
+      picked().forEach(function(p){
+        var left = CRITERIA.length - doneCount(p.id);
+        if (left) h0 += '<li><button class="linkbtn" data-act="bot" data-bot="' + p.id + '" data-goto="3">' + p.name + '</button>: ' + left + ' to go</li>';
+      });
+      return h0 + '</ul></div>';
+    }
+    var ranked = picked().map(function(p){ return {b:p, p:pct(p.id)}; }).sort(function(a, z){ return z.p - a.p; });
+    var top = ranked[0], close = ranked[1] && (top.p - ranked[1].p) < 5;
+    var h = '<div class="head"><h2>' + (close ? 'Too close to call' : top.b.name + ' comes out on top') + '</h2><p class="lede">' +
+      (close ? 'Your top two are within 5 points. Look at the criteria where they differ and talk it through.'
+             : 'That’s what your scores and priorities say' + (S.team ? ', Team ' + esc(S.team) : '') + '. The final call is still yours.') + '</p></div>';
+    if (sc(top.b.id, 'parts') <= 2) h += '<div class="msg">You gave ' + top.b.name + ' a ' + sc(top.b.id, 'parts') + ' for Parts. Check with a coach before you commit to it.</div>';
+    h += '<div class="rank">';
+    ranked.forEach(function(r, i){
+      var hi = CRITERIA.slice().sort(function(a, z){ return sc(r.b.id, z.id) - sc(r.b.id, a.id); });
+      h += '<div class="row' + (i === 0 ? ' top' : '') + '"><div class="row-head"><span class="n">' + (i+1) + '. ' + r.b.name + '</span><span class="pct">' + r.p + '</span></div>' +
+        '<div class="track"><div class="fill" data-w="' + r.p + '"></div></div>' +
+        '<small>Strongest: ' + hi[0].name + '. Weakest: ' + hi[hi.length-1].name + '.</small></div>';
+    });
+    h += '</div>';
+
+    h += '<section class="gap"><h3>Score sheet</h3><div class="scroll"><table><thead><tr><th>Criterion</th>';
+    ranked.forEach(function(r){ h += '<th>' + r.b.name + '</th>'; });
+    h += '</tr></thead><tbody>';
+    CRITERIA.forEach(function(c){
+      var best = Math.max.apply(null, ranked.map(function(r){ return sc(r.b.id, c.id); }));
+      h += '<tr><td>' + c.name + ' <small>×' + S.weights[c.id] + '</small></td>';
+      ranked.forEach(function(r){ var v = sc(r.b.id, c.id); h += '<td' + (v === best ? ' class="best"' : '') + '>' + v + '</td>'; });
+      h += '</tr>';
+    });
+    h += '</tbody></table></div></section>';
+
+    h += '<section class="gap"><h3>Make the call</h3><div class="two">' +
+      '<div class="field"><label for="because">We’re building… because…</label><textarea id="because" data-field="because" placeholder="Name the bot and the evidence that convinced you.">' + esc(S.because) + '</textarea></div>' +
+      '<div class="field"><label for="worry">One thing we’ll need to fix or watch</label><textarea id="worry" data-field="worry" placeholder="Every bot has a weak spot. What’s yours?">' + esc(S.worry) + '</textarea></div></div></section>';
+
+    h += '<section class="gap noprint"><h3>Share with your coach</h3>' +
+      '<textarea id="summary" readonly style="min-height:190px;font-size:.9rem">' + esc(summary(ranked)) + '</textarea>' +
+      '<div class="bar"><span class="status" id="copied" role="status"></span><span><button class="btn ghost" data-act="print">Print</button> ' +
+      '<button class="btn" data-act="copy">Copy summary</button></span></div></section>';
+    return h;
+  }
+
+  function summary(ranked){
+    var L = [];
+    L.push('BOT SCOUT' + (S.team ? ' — Team ' + S.team : ''));
+    L.push(new Date().toLocaleDateString());
+    L.push('');
+    L.push('Priorities: ' + CRITERIA.map(function(c){ return c.name + ' ×' + S.weights[c.id]; }).join(', '));
+    L.push('');
+    ranked.forEach(function(r, i){
+      L.push((i+1) + '. ' + r.b.name + ' — ' + r.p + '/100  (' + CRITERIA.map(function(c){ return c.name + ' ' + sc(r.b.id, c.id); }).join(', ') + ')');
+      if (S.notes[r.b.id]) L.push('   Evidence: ' + S.notes[r.b.id]);
+    });
+    L.push('');
+    L.push('Our decision: ' + (S.because || '(not written yet)'));
+    L.push('Watch out for: ' + (S.worry || '(not written yet)'));
+    return L.join('\n');
+  }
+
+  /* ---------- render + events ---------- */
+  var view = document.getElementById('view'), steps = document.getElementById('steps');
+  function render(top){
+    steps.innerHTML = navHTML();
+    view.innerHTML = [v1, v2, v3, v4][S.step - 1]();
+    flash = '';
+    save();
+    if (top) window.scrollTo(0, 0);
+    if (S.step === 4) requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      Array.prototype.forEach.call(view.querySelectorAll('.fill'), function(f){ f.style.width = f.getAttribute('data-w') + '%'; });
+    }); });
+  }
+
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-act]'); if (!t) return;
+    var act = t.getAttribute('data-act');
+    if (act === 'go') { S.step = +t.getAttribute('data-step'); render(true); }
+    else if (act === 'bot') {
+      S.active = t.getAttribute('data-bot');
+      if (t.getAttribute('data-goto')) S.step = 3;
+      render(!!(t.getAttribute('data-top') || t.getAttribute('data-goto')));
+    }
+    else if (act === 'reset') {
+      if (window.confirm('Clear everything and start over?')) { S = fresh(); render(true); }
+    }
+    else if (act === 'print') { try { window.print(); } catch(err){} }
+    else if (act === 'copy') {
+      var ta = document.getElementById('summary'), note = document.getElementById('copied');
+      var ok = function(){ note.textContent = 'Copied'; };
+      var fallback = function(){ ta.focus(); ta.select(); try { document.execCommand('copy'); ok(); } catch(err){ note.textContent = 'Select the text and copy it'; } };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(ok, fallback); else fallback();
+    }
+  });
+
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if (t.hasAttribute('data-pick')) {
+      var id = t.getAttribute('data-pick'), i = S.picks.indexOf(id);
+      if (t.checked && i < 0 && S.picks.length < MAX_PICKS) S.picks.push(id);
+      if (!t.checked && i > -1) S.picks.splice(i, 1);
+      render(false);
+    } else if (t.hasAttribute('data-weight')) {
+      var cid = t.getAttribute('data-weight'), v = +t.value;
+      if (v === 3 && S.weights[cid] !== 3 && mustCount() >= MAX_MUST) {
+        flash = 'You’ve used both must-haves. Downgrade one before adding another.';
+      } else { S.weights[cid] = v; }
+      render(false);
+    } else if (t.hasAttribute('data-score')) {
+      var c = t.getAttribute('data-score');
+      (S.scores[S.active] = S.scores[S.active] || {})[c] = +t.value;
+      document.getElementById('beam-' + c).innerHTML = beam(+t.value);
+      document.getElementById('prog').textContent = progText();
+      var tab = view.querySelector('.tabs [data-bot="' + S.active + '"] i');
+      if (tab) tab.textContent = doneCount(S.active) + '/' + CRITERIA.length;
+      steps.innerHTML = navHTML();
+      save();
+    }
+  });
+
+  document.addEventListener('input', function(e){
+    var f = e.target.getAttribute && e.target.getAttribute('data-field'); if (!f) return;
+    if (f === 'notes') S.notes[S.active] = e.target.value; else S[f] = e.target.value;
+    save();
+    if (f === 'because' || f === 'worry') {
+      var ta = document.getElementById('summary');
+      if (ta) ta.value = summary(picked().map(function(p){ return {b:p, p:pct(p.id)}; }).sort(function(a, z){ return z.p - a.p; }));
+    }
+  });
+
+  render(false);
+})();
+</script>
+</body>
+</html>
